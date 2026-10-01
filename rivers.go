@@ -213,13 +213,17 @@ func Rivers(m *hmz2map.Map, wetlandsAsLand bool) ([]RiverPath, RiverReport, erro
 const RiverLayer = "Above Terrain"
 
 // RiverWidth returns the stroke width of a river of the given size, in the
-// units of a shape's @strokeWidth. Every size is drawn at the width of a line
-// drawn in the app (0.05) until rivers display as expected; the size is passed
-// through so widths can differ later without changing the paths.
+// units of a shape's @strokeWidth (issue #1). Streams are drawn at the width of
+// a line drawn in the app (0.05); rivers and great rivers are two and three
+// times as wide, map2png's proportions.
 func RiverWidth(size hmz2map.RiverSize) (float64, error) {
 	switch size {
-	case hmz2map.SizeStream, hmz2map.SizeRiver, hmz2map.SizeGreatRiver:
+	case hmz2map.SizeStream:
 		return 0.05, nil
+	case hmz2map.SizeRiver:
+		return 0.10, nil
+	case hmz2map.SizeGreatRiver:
+		return 0.15, nil
 	}
 	return 0, fmt.Errorf("invalid river size %q", size)
 }

@@ -171,9 +171,16 @@ func TestRiverPathsSplit(t *testing.T) {
 }
 
 func TestRiverWidth(t *testing.T) {
-	for _, s := range hmz2map.RiverSizes {
-		if w, err := RiverWidth(s); err != nil || w != 0.05 {
-			t.Errorf("%s: got %g, %v; want 0.05", s, w, err)
+	for _, tc := range []struct {
+		size hmz2map.RiverSize
+		want float64
+	}{
+		{hmz2map.SizeStream, 0.05},
+		{hmz2map.SizeRiver, 0.10},
+		{hmz2map.SizeGreatRiver, 0.15},
+	} {
+		if w, err := RiverWidth(tc.size); err != nil || w != tc.want {
+			t.Errorf("%s: got %g, %v; want %g", tc.size, w, err, tc.want)
 		}
 	}
 	if _, err := RiverWidth("creek"); err == nil {

@@ -71,7 +71,15 @@ Rivers are built from the hexes' `rivers` lists as paths along hex edges, and ea
 - Two edges flowing out of one vertex is an error: rivers don't split.
 
 **Drawing.** Each path is one line, made by `wxx`'s `NewEdgePath` through the path's corners, on the `Above Terrain` layer, above the tiles whose background colors show the terrain, as lines drawn in the app are. `NewEdgePath` checks that each pair of corners next to each other is the two ends of one hex edge. Lines are `wxx`'s default color, opaque blue, with no fill.
-Its width comes from its size class, but for now every size gets the width of a line drawn in the app (`strokeWidth` 0.05), until rivers display as expected. Mouths like `map2png`'s are left out.
+Its width (`strokeWidth`) comes from its size class, in `map2png`'s 1 : 2 : 3 proportions, with streams at the width of a line drawn in the app:
+
+| Size          | Width |
+| ------------- | ----- |
+| `stream`      | 0.05  |
+| `river`       | 0.10  |
+| `great-river` | 0.15  |
+
+Mouths like `map2png`'s are left out for now ([#2](https://github.com/maloquacious/map2wxx/issues/2)).
 
 A vertex is named by one of the hexes that share it: a column, a row, and one of that hex's corners.
 The tool compares vertices by position, so the three names a vertex can have are the same vertex.
