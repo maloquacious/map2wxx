@@ -11,7 +11,7 @@ The map is decoded with `hmz2map`'s own Go types, so the schema is `hmz2map`'s.
 The converter is being built in small steps:
 
 1. **Colored blank hexes** (v0.1.0): every hex is Worldographer's `Blank` terrain, with its background colored as [`map2png`](https://github.com/maloquacious/map2png) fills it. This checks the geometry.
-2. **Rivers**, as Worldographer path shapes. In progress: the paths are built (see [Rivers](#rivers)), but aren't written to the map yet. That waits on `wxx` for hex geometry in shape coordinates ([wxx#153](https://github.com/maloquacious/wxx/issues/153)), a fixture of River-style paths ([wxx#154](https://github.com/maloquacious/wxx/issues/154)), and a Path constructor ([wxx#155](https://github.com/maloquacious/wxx/issues/155)).
+2. **Rivers**, as lines along hex edges (see [Rivers](#rivers)). Built with `wxx`'s `NewEdgePath` ([wxx#155](https://github.com/maloquacious/wxx/issues/155)); waiting on a check in Worldographer.
 3. **Terrain**, as Worldographer tile types. Not yet written.
 
 ## Usage
@@ -24,9 +24,10 @@ Flags:
 
 - `-output <file>` is the `.wxx` file to write. Required.
 - `-app <version>` is the Worldographer application version to write, such as `2.07`. The default, `current`, is the newest version `wxx` writes (`xmlio.CurrentApp()`, `2.08` with `wxx` v0.48.0-beta); `-h` shows which version that is. A version `wxx` doesn't write is an error.
+- `-wetlands-as-land` treats hexes with a `marshes`, `swamps`, or `mangroves` surface as land for rivers, as in `map2png`. The default is off: they count as water, so no river is drawn along their sides.
 - `-version` prints the version.
 
-The command prints the time taken by each phase, the map size, and the application version it wrote.
+The command prints the time taken by each phase, the map size, the application version it wrote, and the river edges and paths it drew.
 
 `map2wxx` has no border option: it converts whatever map it is given.
 For a map with a deep-ocean border, give it the map from `hmz2map -border`.
@@ -55,7 +56,7 @@ Its custom background color (`@bgColor`) is `map2png.FillColor` of the hex, with
 
 ## Rivers
 
-Rivers are built from the hexes' `rivers` lists as paths along hex edges, ready to be written as Worldographer path shapes.
+Rivers are built from the hexes' `rivers` lists as paths along hex edges, and each path is written as a Worldographer line.
 
 **Edges.** `map2wxx` draws the same edges as `map2png`, by the same rules (see `map2png`'s README):
 
@@ -69,7 +70,7 @@ Rivers are built from the hexes' `rivers` lists as paths along hex edges, ready 
 - Every other edge starts a new path. So at a confluence the main stem runs through and the tributary ends, and a path breaks where a river changes size class (the next one starts at the same vertex).
 - Two edges flowing out of one vertex is an error: rivers don't split.
 
-**Drawing.** Each path will be one shape on the `Above Terrain` layer, above the tiles whose background colors show the terrain, as lines drawn in the app are.
+**Drawing.** Each path is one line, made by `wxx`'s `NewEdgePath` through the path's corners, on the `Above Terrain` layer, above the tiles whose background colors show the terrain, as lines drawn in the app are. `NewEdgePath` checks that each pair of corners next to each other is the two ends of one hex edge. Lines are `wxx`'s default color, opaque blue, with no fill.
 Its width comes from its size class, but for now every size gets the width of a line drawn in the app (`strokeWidth` 0.05), until rivers display as expected. Mouths like `map2png`'s are left out.
 
 A vertex is named by one of the hexes that share it: a column, a row, and one of that hex's corners.

@@ -18,6 +18,8 @@ github.com/maloquacious/semver v0.4.1 h1:qwMBcA9VfkD1KsPIMcX7KW9/rnBpBQBbTTcZhlg
 github.com/maloquacious/semver v0.4.1/go.mod h1:0VQ90ipG1SLXCDcQo1bgYTBIpvXsEiNOnEF5Bs/HRYY=
 github.com/maloquacious/wxx v0.48.0-beta h1:VO6kKp7Qh48MnI1yvAmwyLRhvJS4irjtXJhzr4D3+lY=
 github.com/maloquacious/wxx v0.48.0-beta/go.mod h1:7bKDYW65tGqHIPaZ/Y2Cg8CYodH12CldzQG0kRDM0ng=
+github.com/maloquacious/wxx v0.48.0-beta.0.20261001215011-538b8a3dfe6c h1:XcP4ZwyBChJ4o8RNru7V9p0QWpj48qxC1tal+hGRRRw=
+github.com/maloquacious/wxx v0.48.0-beta.0.20261001215011-538b8a3dfe6c/go.mod h1:7bKDYW65tGqHIPaZ/Y2Cg8CYodH12CldzQG0kRDM0ng=
 golang.org/x/image v0.46.0 h1:b1+oYj0Jbp6K5MDT4i4/eZpYlk3V8SJhhDKh6LBHAyQ=
 golang.org/x/image v0.46.0/go.mod h1:3B3W05VGVQyuXucLINLjXKrqISASfi4Xj+iCVkLMwew=
 golang.org/x/sys v0.48.0 h1:bbX/i/6MgT9BVLM9RT1thmxL04yeTAhbEz4SyadbXoo=

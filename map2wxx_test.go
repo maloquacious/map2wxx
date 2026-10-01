@@ -33,7 +33,7 @@ var sides = []hmz2map.Side{hmz2map.SideN, hmz2map.SideNE, hmz2map.SideSE, hmz2ma
 // pair of hexes hmz2map calls adjacent is one hex apart on the COLUMNS grid.
 func TestGeometry(t *testing.T) {
 	m := testMap(7, 5)
-	w, err := Convert(m, xmlio.CurrentApp())
+	w, _, err := Convert(m, Options{App: xmlio.CurrentApp()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestGeometry(t *testing.T) {
 func TestRoundTrip(t *testing.T) {
 	m := testMap(7, 5)
 	for _, app := range []string{"2.06", "2.07", "2.08"} {
-		w, err := Convert(m, app)
+		w, _, err := Convert(m, Options{App: app})
 		if err != nil {
 			t.Fatalf("%s: %v", app, err)
 		}
@@ -117,7 +117,7 @@ func TestUnsupportedApp(t *testing.T) {
 	if err := CheckApp(xmlio.CurrentApp()); err != nil {
 		t.Errorf("CheckApp(%q): %v", xmlio.CurrentApp(), err)
 	}
-	if _, err := Convert(testMap(3, 3), "9.99"); !errors.Is(err, wxx.ErrUnsupportedMapVersion) {
+	if _, _, err := Convert(testMap(3, 3), Options{App: "9.99"}); !errors.Is(err, wxx.ErrUnsupportedMapVersion) {
 		t.Errorf("got %v, want %v", err, wxx.ErrUnsupportedMapVersion)
 	}
 }
@@ -135,7 +135,7 @@ func TestCheck(t *testing.T) {
 	} {
 		m := testMap(3, 3)
 		tc.edit(m)
-		if _, err := Convert(m, xmlio.CurrentApp()); err == nil {
+		if _, _, err := Convert(m, Options{App: xmlio.CurrentApp()}); err == nil {
 			t.Errorf("%s: no error", tc.name)
 		}
 	}

@@ -3,10 +3,13 @@
 package map2wxx
 
 import (
+	"bytes"
 	"slices"
 	"testing"
 
 	"github.com/maloquacious/hmz2map"
+	"github.com/maloquacious/wxx"
+	"github.com/maloquacious/wxx/xmlio"
 )
 
 // TestVertexKey checks that the hexes sharing a corner give it one key: each
@@ -175,5 +178,50 @@ func TestRiverWidth(t *testing.T) {
 	}
 	if _, err := RiverWidth("creek"); err == nil {
 		t.Error("creek: no error")
+	}
+}
+
+// TestConvertRivers checks that a river reaches the file as one line along
+// hex edges, on RiverLayer, through its corners in flow order.
+func TestConvertRivers(t *testing.T) {
+	m := landMap(5, 5)
+	addRiver(m, 2, 2, river(hmz2map.SideNW, hmz2map.CornerW, 100))
+	addRiver(m, 2, 2, river(hmz2map.SideSW, hmz2map.CornerSW, 120))
+	w, rep, err := Convert(m, Options{App: xmlio.CurrentApp()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Paths[hmz2map.SizeStream] != 1 {
+		t.Fatalf("got paths %v, want 1 stream", rep.Paths)
+	}
+	var buf bytes.Buffer
+	if err := xmlio.NewEncoder(xmlio.CurrentApp()).Encode(&buf, w); err != nil {
+		t.Fatal(err)
+	}
+	back, err := xmlio.NewDecoder().Decode(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(back.Shapes) != 1 {
+		t.Fatalf("got %d shapes, want 1", len(back.Shapes))
+	}
+	s := back.Shapes[0]
+	if s.Type != "Path" || s.MapLayer != RiverLayer || s.StrokeWidth != 0.05 {
+		t.Errorf("got %s on %q, width %g; want a Path on %q, width 0.05", s.Type, s.MapLayer, s.StrokeWidth, RiverLayer)
+	}
+	var want []wxx.Position_t
+	for _, c := range []wxx.Corner_e{wxx.CornerNW, wxx.CornerW, wxx.CornerSW} {
+		p, err := back.TileCorner(2, 2, c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want = append(want, p)
+	}
+	var got []wxx.Position_t
+	for _, p := range s.Points {
+		got = append(got, wxx.Position_t{X: p.X, Y: p.Y})
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got points %v, want %v", got, want)
 	}
 }

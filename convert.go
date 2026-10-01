@@ -55,26 +55,36 @@ func Check(m *hmz2map.Map) error {
 	return nil
 }
 
+// Options configures Convert.
+type Options struct {
+	// App is the application version whose new-map defaults are used: a
+	// registered version such as "2.08" (see ResolveApp).
+	App string
+	// WetlandsAsLand treats marshes, swamps, and mangroves as land for
+	// rivers, as map2png's -wetlands-as-land does.
+	WetlandsAsLand bool
+}
+
 // Convert returns m as a Worldographer map with the new-map defaults of
-// application version app (a registered version such as "2.08"; see
-// ResolveApp).
+// application version opt.App, with a report of the rivers drawn.
 //
 // The Worldographer map is COLUMNS, which is hmz2map's odd-q layout: hex
 // (col, row) is tile [col][row]. Every tile is Blank, with its background
-// colored as map2png fills the hex.
-func Convert(m *hmz2map.Map, app string) (*wxx.Map_t, error) {
+// colored as map2png fills the hex. Each river path (see Rivers) is a line
+// along hex edges on RiverLayer, RiverWidth wide.
+func Convert(m *hmz2map.Map, opt Options) (*wxx.Map_t, RiverReport, error) {
 	if err := Check(m); err != nil {
-		return nil, err
+		return nil, RiverReport{}, err
 	}
-	w, err := xmlio.NewMap(m.Columns, m.Rows, xmlio.WithApp(app), xmlio.WithHexOrientation("COLUMNS"))
+	w, err := xmlio.NewMap(m.Columns, m.Rows, xmlio.WithApp(opt.App), xmlio.WithHexOrientation("COLUMNS"))
 	if err != nil {
-		return nil, err
+		return nil, RiverReport{}, err
 	}
 	for i := range m.Hexes {
 		h := &m.Hexes[i]
 		c, err := map2png.FillColor(h)
 		if err != nil {
-			return nil, fmt.Errorf("hex (%d, %d): %w", h.Col, h.Row, err)
+			return nil, RiverReport{}, fmt.Errorf("hex (%d, %d): %w", h.Col, h.Row, err)
 		}
 		w.Tiles.Tiles[h.Col][h.Row].CustomBackgroundColor = &wxx.RGBA_t{
 			R: float64(c.R) / 255,
@@ -83,5 +93,33 @@ func Convert(m *hmz2map.Map, app string) (*wxx.Map_t, error) {
 			A: float64(c.A) / 255,
 		}
 	}
-	return w, nil
+	paths, rep, err := Rivers(m, opt.WetlandsAsLand)
+	if err != nil {
+		return nil, rep, err
+	}
+	for i, p := range paths {
+		s, err := riverShape(w, p)
+		if err != nil {
+			return nil, rep, fmt.Errorf("river path %d: %w", i, err)
+		}
+		w.Shapes = append(w.Shapes, s)
+	}
+	return w, rep, nil
+}
+
+// riverShape returns a river path as a line along hex edges.
+func riverShape(w *wxx.Map_t, p RiverPath) (*wxx.Shape_t, error) {
+	width, err := RiverWidth(p.Size)
+	if err != nil {
+		return nil, err
+	}
+	vertices := make([]wxx.Vertex_t, len(p.Vertices))
+	for i, v := range p.Vertices {
+		c, err := wxx.ParseCorner(string(v.Corner))
+		if err != nil {
+			return nil, err
+		}
+		vertices[i] = wxx.Vertex_t{Col: v.Col, Row: v.Row, Corner: c}
+	}
+	return w.NewEdgePath(vertices, wxx.WithMapLayer(RiverLayer), wxx.WithStrokeWidth(width))
 }

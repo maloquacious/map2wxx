@@ -6,7 +6,7 @@ require (
 	github.com/maloquacious/hmz2map v0.2.0
 	github.com/maloquacious/map2png v0.3.1
 	github.com/maloquacious/semver v0.4.1
-	github.com/maloquacious/wxx v0.48.0-beta
+	github.com/maloquacious/wxx v0.48.0-beta.0.20261001215011-538b8a3dfe6c
 )
 
 require (
