@@ -11,7 +11,7 @@ The map is decoded with `hmz2map`'s own Go types, so the schema is `hmz2map`'s.
 The converter is being built in small steps:
 
 1. **Colored blank hexes** (v0.1.0): every hex is Worldographer's `Blank` terrain, with its background colored as [`map2png`](https://github.com/maloquacious/map2png) fills it. This checks the geometry.
-2. **Rivers**, as lines along hex edges (see [Rivers](#rivers)). Built with `wxx`'s `NewEdgePath` ([wxx#155](https://github.com/maloquacious/wxx/issues/155)); waiting on a check in Worldographer.
+2. **Rivers** (v0.2.0): lines along hex edges (see [Rivers](#rivers)), built with `wxx`'s `NewEdgePath` ([wxx#155](https://github.com/maloquacious/wxx/issues/155)).
 3. **Terrain**, as Worldographer tile types. Not yet written.
 
 ## Usage
@@ -23,7 +23,7 @@ go run ./cmd/map2wxx [flags] <map.json>
 Flags:
 
 - `-output <file>` is the `.wxx` file to write. Required.
-- `-app <version>` is the Worldographer application version to write, such as `2.07`. The default, `current`, is the newest version `wxx` writes (`xmlio.CurrentApp()`, `2.08` with `wxx` v0.48.0-beta); `-h` shows which version that is. A version `wxx` doesn't write is an error.
+- `-app <version>` is the Worldographer application version to write, such as `2.07`. The default, `current`, is the newest version `wxx` writes (`xmlio.CurrentApp()`, `2.08` with `wxx` v0.50.0-beta); `-h` shows which version that is. A version `wxx` doesn't write is an error.
 - `-wetlands-as-land` treats hexes with a `marshes`, `swamps`, or `mangroves` surface as land for rivers, as in `map2png`. The default is off: they count as water, so no river is drawn along their sides.
 - `-version` prints the version.
 
