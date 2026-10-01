@@ -207,3 +207,19 @@ func Rivers(m *hmz2map.Map, wetlandsAsLand bool) ([]RiverPath, RiverReport, erro
 	paths, err := RiverPaths(edges, &rep)
 	return paths, rep, err
 }
+
+// RiverLayer is the map layer rivers are drawn on: above the tiles, whose
+// background colors show the terrain, as Worldographer's own lines are.
+const RiverLayer = "Above Terrain"
+
+// RiverWidth returns the stroke width of a river of the given size, in the
+// units of a shape's @strokeWidth. Every size is drawn at the width of a line
+// drawn in the app (0.05) until rivers display as expected; the size is passed
+// through so widths can differ later without changing the paths.
+func RiverWidth(size hmz2map.RiverSize) (float64, error) {
+	switch size {
+	case hmz2map.SizeStream, hmz2map.SizeRiver, hmz2map.SizeGreatRiver:
+		return 0.05, nil
+	}
+	return 0, fmt.Errorf("invalid river size %q", size)
+}

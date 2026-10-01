@@ -69,6 +69,9 @@ Rivers are built from the hexes' `rivers` lists as paths along hex edges, ready 
 - Every other edge starts a new path. So at a confluence the main stem runs through and the tributary ends, and a path breaks where a river changes size class (the next one starts at the same vertex).
 - Two edges flowing out of one vertex is an error: rivers don't split.
 
+**Drawing.** Each path will be one shape on the `Above Terrain` layer, above the tiles whose background colors show the terrain, as lines drawn in the app are.
+Its width comes from its size class, but for now every size gets the width of a line drawn in the app (`strokeWidth` 0.05), until rivers display as expected. Mouths like `map2png`'s are left out.
+
 A vertex is named by one of the hexes that share it: a column, a row, and one of that hex's corners.
 The tool compares vertices by position, so the three names a vertex can have are the same vertex.
 

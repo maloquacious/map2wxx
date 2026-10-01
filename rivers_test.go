@@ -83,7 +83,7 @@ func TestRiverEdgesOnce(t *testing.T) {
 func TestRiverEdgesShore(t *testing.T) {
 	m := landMap(5, 5)
 	m.At(2, 1).Landform = hmz2map.LandformSaltWater
-	m.At(1, 1).Surface = hmz2map.SurfaceMarshes // (2, 2)'s nw neighbor
+	m.At(1, 1).Surface = hmz2map.SurfaceMarshes                    // (2, 2)'s nw neighbor
 	addRiver(m, 2, 2, river(hmz2map.SideN, hmz2map.CornerNE, 50))  // sea
 	addRiver(m, 2, 2, river(hmz2map.SideNW, hmz2map.CornerW, 50))  // marsh
 	addRiver(m, 2, 2, river(hmz2map.SideSE, hmz2map.CornerSE, 50)) // land
@@ -164,5 +164,16 @@ func TestRiverPathsSplit(t *testing.T) {
 	}
 	if _, err := RiverPaths(edges, &RiverReport{Paths: map[hmz2map.RiverSize]int{}}); err == nil {
 		t.Error("a vertex with two outflows: no error")
+	}
+}
+
+func TestRiverWidth(t *testing.T) {
+	for _, s := range hmz2map.RiverSizes {
+		if w, err := RiverWidth(s); err != nil || w != 0.05 {
+			t.Errorf("%s: got %g, %v; want 0.05", s, w, err)
+		}
+	}
+	if _, err := RiverWidth("creek"); err == nil {
+		t.Error("creek: no error")
 	}
 }
