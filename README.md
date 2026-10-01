@@ -11,7 +11,7 @@ The map is decoded with `hmz2map`'s own Go types, so the schema is `hmz2map`'s.
 The converter is being built in small steps:
 
 1. **Colored blank hexes** (v0.1.0): every hex is Worldographer's `Blank` terrain, with its background colored as [`map2png`](https://github.com/maloquacious/map2png) fills it. This checks the geometry.
-2. **Rivers** (v0.2.0): lines along hex edges (see [Rivers](#rivers)), built with `wxx`'s `NewEdgePath` ([wxx#155](https://github.com/maloquacious/wxx/issues/155)).
+2. **Rivers** (v0.2.0; widths by size class in v0.3.0): lines along hex edges (see [Rivers](#rivers)), built with `wxx`'s `NewEdgePath` ([wxx#155](https://github.com/maloquacious/wxx/issues/155)).
 3. **Terrain**, as Worldographer tile types. Not yet written.
 
 ## Usage
