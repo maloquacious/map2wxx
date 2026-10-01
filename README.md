@@ -11,7 +11,7 @@ The map is decoded with `hmz2map`'s own Go types, so the schema is `hmz2map`'s.
 The converter is being built in small steps:
 
 1. **Colored blank hexes** (v0.1.0): every hex is Worldographer's `Blank` terrain, with its background colored as [`map2png`](https://github.com/maloquacious/map2png) fills it. This checks the geometry.
-2. **Rivers**, as Worldographer path shapes. Not yet written.
+2. **Rivers**, as Worldographer path shapes. In progress: the paths are built (see [Rivers](#rivers)), but aren't written to the map yet. That waits on `wxx` for hex geometry in shape coordinates ([wxx#153](https://github.com/maloquacious/wxx/issues/153)), a fixture of River-style paths ([wxx#154](https://github.com/maloquacious/wxx/issues/154)), and a Path constructor ([wxx#155](https://github.com/maloquacious/wxx/issues/155)).
 3. **Terrain**, as Worldographer tile types. Not yet written.
 
 ## Usage
@@ -53,13 +53,34 @@ A `columns × rows` map is `columns` tiles wide and `rows` tiles high.
 Every tile's terrain is `Blank`, the only entry in the terrain table.
 Its custom background color (`@bgColor`) is `map2png.FillColor` of the hex, with each 8-bit component divided by 255; alpha is 1.
 
+## Rivers
+
+Rivers are built from the hexes' `rivers` lists as paths along hex edges, ready to be written as Worldographer path shapes.
+
+**Edges.** `map2wxx` draws the same edges as `map2png`, by the same rules (see `map2png`'s README):
+
+- Each edge is taken once, from the hex that lists it as its `n`, `ne`, or `se` side, or as its `s`, `sw`, or `nw` side when the hex across is off the map.
+- An edge is drawn only if neither of its hexes is **wet**: a `salt-water` or `fresh-water` landform, or a `marshes`, `swamps`, or `mangroves` surface. So no river runs along a coast or a lake shore. A neighbor off the map is not wet.
+- An edge runs from its upstream vertex to its downstream one, the hex's `flow` corner, which must be one of the side's two corners.
+
+**Paths.** Edges are joined into paths, each of one size class:
+
+- An edge continues the path of an edge flowing into its upstream vertex when that edge is the same size and has the largest drainage of the edges flowing in there. Ties go to the edge listed first.
+- Every other edge starts a new path. So at a confluence the main stem runs through and the tributary ends, and a path breaks where a river changes size class (the next one starts at the same vertex).
+- Two edges flowing out of one vertex is an error: rivers don't split.
+
+A vertex is named by one of the hexes that share it: a column, a row, and one of that hex's corners.
+The tool compares vertices by position, so the three names a vertex can have are the same vertex.
+
+On the Panama map, 4,093 edges are drawn (2,724 streams, 1,225 rivers, 144 great rivers), matching `map2png`, with 358 skipped along shores and 153 with no land; they make 548 paths (411 streams, 116 rivers, 21 great rivers), with 235 confluences.
+
 ## Testing
 
 ```sh
 go test ./...
 ```
 
-The tests check that every pair of hexes `hmz2map` calls neighbors is one hex apart on Worldographer's grid, that every tile is `Blank` with its `map2png` color after a write and a read in each version `wxx` writes, and that bad input and an unsupported `-app` are errors.
+The tests check that every pair of hexes `hmz2map` calls neighbors is one hex apart on Worldographer's grid, that every tile is `Blank` with its `map2png` color after a write and a read in each version `wxx` writes, that bad input and an unsupported `-app` are errors, that the hexes sharing a corner name the same vertex, that shore and water edges are skipped, and that paths run through confluences and break at size changes.
 
 ## License
 
