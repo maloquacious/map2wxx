@@ -63,14 +63,16 @@ Rivers are built from the hexes' `rivers` lists as paths along hex edges, and ea
 - Each edge is taken once, from the hex that lists it as its `n`, `ne`, or `se` side, or as its `s`, `sw`, or `nw` side when the hex across is off the map.
 - An edge is drawn only if neither of its hexes is **wet**: a `salt-water` or `fresh-water` landform, or a `marshes`, `swamps`, or `mangroves` surface. So no river runs along a coast or a lake shore. A neighbor off the map is not wet.
 - An edge runs from its upstream vertex to its downstream one, the hex's `flow` corner, which must be one of the side's two corners.
+- Only drawn edges take part in what follows: paths, confluences, and the check that rivers don't split. Shore and water edges are ignored.
 
 **Paths.** Edges are joined into paths, each of one size class:
 
-- An edge continues the path of an edge flowing into its upstream vertex when that edge is the same size and has the largest drainage of the edges flowing in there. Ties go to the edge listed first.
-- Every other edge starts a new path. So at a confluence the main stem runs through and the tributary ends, and a path breaks where a river changes size class (the next one starts at the same vertex).
+- At each vertex, the **main inflow** is the edge flowing in with the largest drainage, of all the edges flowing in there, whatever their size. Ties go to the edge listed first: in map order (by row, then column) and, within a hex, in the order of its `rivers` list.
+- An edge continues the path of its upstream vertex's main inflow when that inflow is the same size class as the edge. If the main inflow is a different size, the edge starts a new path, even if a smaller inflow there is the same size as the edge.
+- Every other edge starts a new path. A **confluence** is a vertex where two or more drawn edges flow in: there the main stem runs through and the tributaries end. A path also breaks where a river changes size class (the next one starts at the same vertex).
 - Two edges flowing out of one vertex is an error: rivers don't split.
 
-**Drawing.** Each path is one line, made by `wxx`'s `NewEdgePath` through the path's corners, on the `Above Terrain` layer, above the tiles whose background colors show the terrain, as lines drawn in the app are. `NewEdgePath` checks that each pair of corners next to each other is the two ends of one hex edge. Lines are `wxx`'s default color, opaque blue, with no fill.
+**Drawing.** Each path is one line, made by `wxx`'s `NewEdgePath` through the path's corners, on the `Above Terrain` layer, above the tiles whose background colors show the terrain, as lines drawn in the app are. `NewEdgePath` checks that each pair of corners next to each other is the two ends of one hex edge. Lines are `wxx`'s default color, opaque blue (`0.0,0.0,1.0,1.0`), with no fill, as `NewEdgePath` writes a line and as the app writes a line drawn on the grid: no fill color and an empty `fillTexture`.
 Its width (`strokeWidth`) comes from its size class, in `map2png`'s 1 : 2 : 3 proportions, with streams at the width of a line drawn in the app:
 
 | Size          | Width |
@@ -85,6 +87,7 @@ A vertex is named by one of the hexes that share it: a column, a row, and one of
 The tool compares vertices by position, so the three names a vertex can have are the same vertex.
 
 On the Panama map, 4,093 edges are drawn (2,724 streams, 1,225 rivers, 144 great rivers), matching `map2png`, with 358 skipped along shores and 153 with no land; they make 548 paths (411 streams, 116 rivers, 21 great rivers), with 235 confluences.
+With `-wetlands-as-land`, 4,318 edges are drawn (2,842 streams, 1,307 rivers, 169 great rivers), with 220 skipped along shores and 66 with no land; they make 567 paths (428 streams, 119 rivers, 20 great rivers), with 261 confluences.
 
 ## Testing
 

@@ -84,7 +84,7 @@ func Convert(m *hmz2map.Map, opt Options) (*wxx.Map_t, RiverReport, error) {
 		h := &m.Hexes[i]
 		c, err := map2png.FillColor(h)
 		if err != nil {
-			return nil, RiverReport{}, fmt.Errorf("hex (%d, %d): %w", h.Col, h.Row, err)
+			return nil, RiverReport{}, err // FillColor names the hex
 		}
 		w.Tiles.Tiles[h.Col][h.Row].CustomBackgroundColor = &wxx.RGBA_t{
 			R: float64(c.R) / 255,

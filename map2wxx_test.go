@@ -5,6 +5,7 @@ package map2wxx
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/maloquacious/hmz2map"
@@ -138,5 +139,18 @@ func TestCheck(t *testing.T) {
 		if _, _, err := Convert(m, Options{App: xmlio.CurrentApp()}); err == nil {
 			t.Errorf("%s: no error", tc.name)
 		}
+	}
+}
+
+// TestErrorNamesHexOnce checks that a bad hex is named once in the error.
+func TestErrorNamesHexOnce(t *testing.T) {
+	m := testMap(3, 3)
+	m.Hexes[0].Landform = "lava"
+	_, _, err := Convert(m, Options{App: xmlio.CurrentApp()})
+	if err == nil {
+		t.Fatal("no error")
+	}
+	if n := strings.Count(err.Error(), "hex (0, 0)"); n != 1 {
+		t.Errorf("got %q: names the hex %d times, want once", err, n)
 	}
 }
