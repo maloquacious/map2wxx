@@ -58,49 +58,118 @@ func TestGeometry(t *testing.T) {
 	}
 }
 
-// TestRoundTrip checks that every tile is Blank and keeps map2png's fill
-// color through an encode and decode, for every version wxx writes.
+// TestRoundTrip checks that every tile keeps the tile Tile picks, and its
+// background color, through an encode and decode, for every version wxx
+// writes: map2png's fill color by default, and none with TileColors.
 func TestRoundTrip(t *testing.T) {
 	m := testMap(7, 5)
 	for _, app := range []string{"2.06", "2.07", "2.08"} {
-		w, _, err := Convert(m, Options{App: app})
-		if err != nil {
-			t.Fatalf("%s: %v", app, err)
-		}
-		var buf bytes.Buffer
-		if err := xmlio.NewEncoder(app).Encode(&buf, w); err != nil {
-			t.Fatalf("%s: encode: %v", app, err)
-		}
-		back, err := xmlio.NewDecoder().Decode(&buf)
-		if err != nil {
-			t.Fatalf("%s: decode: %v", app, err)
-		}
-		if got := back.MetaData.Version.App.Raw; got != app {
-			t.Errorf("%s: wrote version %q", app, got)
-		}
-		for _, h := range m.Hexes {
-			want, err := map2png.FillColor(&h)
+		for _, tileColors := range []bool{false, true} {
+			w, _, err := Convert(m, Options{App: app, TileColors: tileColors})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s: %v", app, err)
 			}
-			tile := back.Tiles.Tiles[h.Col][h.Row]
-			if name := back.TerrainMap.List[tile.Terrain].Label; name != wxx.BlankTerrain {
-				t.Errorf("%s: (%d, %d) terrain %q, want %q", app, h.Col, h.Row, name, wxx.BlankTerrain)
+			var buf bytes.Buffer
+			if err := xmlio.NewEncoder(app).Encode(&buf, w); err != nil {
+				t.Fatalf("%s: encode: %v", app, err)
 			}
-			c := tile.CustomBackgroundColor
-			if c == nil {
-				t.Errorf("%s: (%d, %d) has no background color", app, h.Col, h.Row)
-				continue
+			back, err := xmlio.NewDecoder().Decode(&buf)
+			if err != nil {
+				t.Fatalf("%s: decode: %v", app, err)
 			}
-			got := [4]uint8{to8(c.R), to8(c.G), to8(c.B), to8(c.A)}
-			if got != [4]uint8{want.R, want.G, want.B, want.A} {
-				t.Errorf("%s: (%d, %d) color %v, want %v", app, h.Col, h.Row, got, want)
+			if got := back.MetaData.Version.App.Raw; got != app {
+				t.Errorf("%s: wrote version %q", app, got)
+			}
+			for _, h := range m.Hexes {
+				want, err := Tile(&h)
+				if err != nil {
+					t.Fatal(err)
+				}
+				tile := back.Tiles.Tiles[h.Col][h.Row]
+				if name := back.TerrainMap.List[tile.Terrain].Label; name != want {
+					t.Errorf("%s: (%d, %d) terrain %q, want %q", app, h.Col, h.Row, name, want)
+				}
+				c := tile.CustomBackgroundColor
+				if tileColors {
+					if c != nil {
+						t.Errorf("%s, tile colors: (%d, %d) has a custom background color", app, h.Col, h.Row)
+					}
+					continue
+				}
+				fill, err := map2png.FillColor(&h)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if c == nil {
+					t.Errorf("%s: (%d, %d) has no background color", app, h.Col, h.Row)
+					continue
+				}
+				got := [4]uint8{to8(c.R), to8(c.G), to8(c.B), to8(c.A)}
+				if got != [4]uint8{fill.R, fill.G, fill.B, fill.A} {
+					t.Errorf("%s: (%d, %d) color %v, want %v", app, h.Col, h.Row, got, fill)
+				}
 			}
 		}
 	}
 }
 
 func to8(f float64) uint8 { return uint8(f*255 + 0.5) }
+
+// TestTile checks the order of Tile's rules and the relief of each landform.
+func TestTile(t *testing.T) {
+	land := func(l hmz2map.Landform, s hmz2map.Surface, b hmz2map.Biome, flags ...hmz2map.Flag) hmz2map.Hex {
+		return hmz2map.Hex{Landform: l, Surface: s, Biome: b, Flags: flags}
+	}
+	sea := func(d hmz2map.Depth, flags ...hmz2map.Flag) hmz2map.Hex {
+		return hmz2map.Hex{Landform: hmz2map.LandformSaltWater, Surface: hmz2map.SurfaceClear, Biome: hmz2map.BiomeClear, Depth: d, Flags: flags}
+	}
+	const clear = hmz2map.SurfaceClear
+	for _, tc := range []struct {
+		name string
+		hex  hmz2map.Hex
+		want string
+	}{
+		{"coast beats depth", sea(hmz2map.DepthShallow, hmz2map.FlagCoast), TileWaterShoals},
+		{"shallow", sea(hmz2map.DepthShallow), TileWaterSea},
+		{"open", sea(hmz2map.DepthOpen), TileWaterSeaDeep},
+		{"deep", sea(hmz2map.DepthDeep), TileWaterOcean},
+		{"inland sea", sea(hmz2map.DepthShallow, hmz2map.FlagInlandSea), TileWaterSea},
+		{"lake", land(hmz2map.LandformFreshWater, clear, hmz2map.BiomeClear), TileWaterSea},
+		{"cliffs", land(hmz2map.LandformCliffs, clear, hmz2map.BiomeClear, hmz2map.FlagImpassable), TileOtherBrokenLands},
+		{"badlands", land(hmz2map.LandformBadlands, clear, hmz2map.BiomeClear, hmz2map.FlagImpassable), TileOtherBadlands},
+		{"volcano beats biome", land(hmz2map.LandformMountains, clear, hmz2map.BiomeCloudForest, hmz2map.FlagVolcano), TileMountainVolcano},
+		{"mangroves", land(hmz2map.LandformFlats, hmz2map.SurfaceMangroves, hmz2map.BiomeTropicalRainforest, hmz2map.FlagCoast), TileFlatSwamp},
+		{"swamps", land(hmz2map.LandformPlains, hmz2map.SurfaceSwamps, hmz2map.BiomeTropicalRainforest), TileFlatWetlandsJungle},
+		{"salt flats", land(hmz2map.LandformFlats, hmz2map.SurfaceSaltFlats, hmz2map.BiomeTropicalDryForest), TileFlatDesertHardClay},
+		{"ice on mountains", land(hmz2map.LandformMountains, hmz2map.SurfaceGlacialIce, hmz2map.BiomeClear), TileMountainsGlacier},
+		{"ice on hills", land(hmz2map.LandformHills, hmz2map.SurfaceGlacialIce, hmz2map.BiomeClear), TileFlatSnowfields},
+		{"rolling plains are flat", land(hmz2map.LandformRollingPlains, clear, hmz2map.BiomeTropicalRainforest), TileFlatForestJungle},
+		{"plateaus are flat", land(hmz2map.LandformPlateaus, clear, hmz2map.BiomeTemperateForest), TileFlatForestMixed},
+		{"volcanic highlands are hills", land(hmz2map.LandformVolcanicHighlands, clear, hmz2map.BiomeCloudForest), TileHillsForestEvergreen},
+		{"mountains", land(hmz2map.LandformMountains, clear, hmz2map.BiomeTropicalDryForest), TileMountainsForestDeciduous},
+		{"open biome on mountains", land(hmz2map.LandformMountains, clear, hmz2map.BiomeSavanna), TileMountains},
+		{"desert on plains", land(hmz2map.LandformPlains, clear, hmz2map.BiomeDesert), TileFlatDesertCactus},
+		{"desert on rolling plains", land(hmz2map.LandformRollingPlains, clear, hmz2map.BiomeDesert), TileFlatDesertRocky},
+		{"desert on plateaus", land(hmz2map.LandformPlateaus, clear, hmz2map.BiomeDesert), TileFlatDesertRocky},
+		{"desert on hills", land(hmz2map.LandformHills, clear, hmz2map.BiomeDesert), TileHills},
+	} {
+		got, err := Tile(&tc.hex)
+		if err != nil {
+			t.Errorf("%s: %v", tc.name, err)
+		} else if got != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+	}
+	for _, h := range []hmz2map.Hex{
+		sea(""),
+		land(hmz2map.LandformHills, "", hmz2map.BiomeSavanna),
+		land(hmz2map.LandformHills, clear, ""),
+	} {
+		if got, err := Tile(&h); err == nil {
+			t.Errorf("%+v: got %q, want an error", h, got)
+		}
+	}
+}
 
 func TestResolveApp(t *testing.T) {
 	if got := ResolveApp(AppCurrent); got != xmlio.CurrentApp() {

@@ -33,6 +33,7 @@ func run(args []string, stdout io.Writer) error {
 	output := fs.String("output", "", "Worldographer .wxx file to write (required)")
 	app := fs.String("app", map2wxx.AppCurrent, fmt.Sprintf("Worldographer application `version` to write, or %q for %s", map2wxx.AppCurrent, xmlio.CurrentApp()))
 	wetlandsAsLand := fs.Bool("wetlands-as-land", false, "treat marshes, swamps, and mangroves as land for rivers")
+	tileColors := fs.Bool("tile-colors", false, "draw tiles in Worldographer's colors instead of map2png's")
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -63,7 +64,7 @@ func run(args []string, stdout io.Writer) error {
 		return err
 	}
 	phase("read input")
-	w, rep, err := map2wxx.Convert(&m, map2wxx.Options{App: appVersion, WetlandsAsLand: *wetlandsAsLand})
+	w, rep, err := map2wxx.Convert(&m, map2wxx.Options{App: appVersion, WetlandsAsLand: *wetlandsAsLand, TileColors: *tileColors})
 	if err != nil {
 		return fmt.Errorf("%s: %w", input, err)
 	}
@@ -75,6 +76,10 @@ func run(args []string, stdout io.Writer) error {
 
 	fmt.Fprintf(stdout, "map:              %d × %d, border %d\n", m.Columns, m.Rows, m.Border)
 	fmt.Fprintf(stdout, "worldographer:    %s, COLUMNS\n", appVersion)
+	fmt.Fprintf(stdout, "tiles:\n")
+	for _, t := range map2wxx.CountTiles(w) {
+		fmt.Fprintf(stdout, "  %6d  %s\n", t.Hexes, t.Name)
+	}
 	fmt.Fprintf(stdout, "river edges:      ")
 	for _, s := range hmz2map.RiverSizes {
 		fmt.Fprintf(stdout, "%d %s, ", rep.Edges[s], s)

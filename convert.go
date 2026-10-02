@@ -63,14 +63,18 @@ type Options struct {
 	// WetlandsAsLand treats marshes, swamps, and mangroves as land for
 	// rivers, as map2png's -wetlands-as-land does.
 	WetlandsAsLand bool
+	// TileColors leaves each tile in Worldographer's color for the tile,
+	// instead of coloring its background as map2png fills the hex.
+	TileColors bool
 }
 
 // Convert returns m as a Worldographer map with the new-map defaults of
 // application version opt.App, with a report of the rivers drawn.
 //
 // The Worldographer map is COLUMNS, which is hmz2map's odd-q layout: hex
-// (col, row) is tile [col][row]. Every tile is Blank, with its background
-// colored as map2png fills the hex. Each river path (see Rivers) is a line
+// (col, row) is tile [col][row]. Each tile is the classic Worldographer tile
+// Tile picks for the hex, with its background colored as map2png fills the
+// hex, or in the tile's own color if opt.TileColors is set. Each river path (see Rivers) is a line
 // along hex edges on RiverLayer, RiverWidth wide.
 func Convert(m *hmz2map.Map, opt Options) (*wxx.Map_t, RiverReport, error) {
 	if err := Check(m); err != nil {
@@ -82,11 +86,20 @@ func Convert(m *hmz2map.Map, opt Options) (*wxx.Map_t, RiverReport, error) {
 	}
 	for i := range m.Hexes {
 		h := &m.Hexes[i]
+		name, err := Tile(h)
+		if err != nil {
+			return nil, RiverReport{}, err // Tile names the hex
+		}
+		tile := w.Tiles.Tiles[h.Col][h.Row]
+		tile.Terrain = w.TerrainMap.EnsureTerrain(name)
+		if opt.TileColors {
+			continue
+		}
 		c, err := map2png.FillColor(h)
 		if err != nil {
 			return nil, RiverReport{}, err // FillColor names the hex
 		}
-		w.Tiles.Tiles[h.Col][h.Row].CustomBackgroundColor = &wxx.RGBA_t{
+		tile.CustomBackgroundColor = &wxx.RGBA_t{
 			R: float64(c.R) / 255,
 			G: float64(c.G) / 255,
 			B: float64(c.B) / 255,
